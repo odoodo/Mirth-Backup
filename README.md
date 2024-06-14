@@ -1,4 +1,4 @@
-Mirth-Backup creates a backup of a mirth configuration
+Creates a backup of a mirth configuration
 
 <h1>Code Template: Automatic Mirth Backup</h1>
 <b>Purpose:</b><br/>
