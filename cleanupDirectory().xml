@@ -1,0 +1,91 @@
+<codeTemplate version="3.4.2">
+  <id>30dbda51-cee3-4f7f-a95b-68af0882f4a9</id>
+  <name>cleanupDirectory()</name>
+  <revision>64</revision>
+  <lastModified>
+    <time>1495099471165</time>
+    <timezone>Europe/Berlin</timezone>
+  </lastModified>
+  <type>FUNCTION</type>
+  <contextSet>
+    <delegate>
+      <contextType>CHANNEL_DEPLOY</contextType>
+      <contextType>CHANNEL_ATTACHMENT</contextType>
+      <contextType>DESTINATION_DISPATCHER</contextType>
+      <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
+      <contextType>CHANNEL_UNDEPLOY</contextType>
+      <contextType>SOURCE_RECEIVER</contextType>
+      <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+      <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
+      <contextType>CHANNEL_PREPROCESSOR</contextType>
+      <contextType>CHANNEL_POSTPROCESSOR</contextType>
+      <contextType>CHANNEL_BATCH</contextType>
+    </delegate>
+  </contextSet>
+  <code>/**
+	Removes all subdirectories from a given directory that are older than a given delay if a mimimal number of subdirectories is reached.&lt;br/&gt;
+	&lt;br/&gt;
+	&lt;i&gt;This function is used to for house keeping of backup folders.&lt;/i&gt;
+
+	@param {String} path - the path to the directory that should be cleaned up
+	@param {Number} maxFileAge - Subdirectories that are older than the here specified number of days (1st day is today) will be deleted if number of resulting directories is not below the minimum specified by &lt;i&gt;&lt;b&gt;minNumberOfBackups&lt;/b&gt;&lt;/i&gt;
+	@param {Number} minNumberOfBackups - The minimum number of backups that should be kept even if the maximum file age is exceeded &lt;i&gt;(optional)&lt;/i&gt;
+*/
+function cleanupDirectory(path, maxFileAge, minFiles){
+   
+	logger.info(&apos;Starting cleanup of directory &quot;&apos; + path + &apos;&quot;.&apos;);
+
+	if(maxFileAge === undefined){
+		maxFileAge = 0;
+	} else if(maxFileAge &gt; 0){
+		// as day 1 is today
+		maxFileAge--;
+	}
+	
+	// open path that should be scanned
+	var directory = new java.io.File(path);
+	// just directories are of interest here
+	content =  org.apache.commons.io.FileUtils.listFilesAndDirs(directory, org.apache.commons.io.filefilter.DirectoryFileFilter.DIRECTORY, org.apache.commons.io.filefilter.DirectoryFileFilter.DIRECTORY);	
+	// remove the parent dir from the result list
+	content.remove(directory);
+	// and transform the collection to an array
+	content = content.toArray();
+	logger.debug(&apos;Found &apos; + content.length  + &apos; subfolder in directory (&apos; + content[1].getPath() + &apos;)&apos;);
+	// sort list of fetched directories having the youngest on top (which should be )
+	java.util.Arrays.sort(content, org.apache.commons.io.comparator.LastModifiedFileComparator.LASTMODIFIED_REVERSE);
+	// calculate the threshold date
+	var dateThreshold =  new Date();
+	// use midnight as reference time
+	dateThreshold.setHours(0,0,0,0);
+	// and calculate the threshold date
+	dateThreshold.setDate(dateThreshold.getDate() - maxFileAge);
+	// in miliseconds
+	dateThreshold = dateThreshold.getTime();
+	logger.trace(&apos;Threshold: &apos; + dateThreshold); 
+	// assure number of subdirectories threshold is initialized
+	if(minFiles === undefined){
+		minFiles = 0;
+	}
+
+	// start from the end of the array
+	var index = content.length - 1;
+	// now remove the oldest directories if there are more than configured in &apos;minfiles&apos;. 
+	// Take into account the the containg folder is also part of the array. Thus index has to be larger as minFiles
+	while((index &gt;= minFiles) &amp;&amp; (content[index].lastModified() &lt; dateThreshold)){
+		// delete the sub directory
+		logger.info(&apos;Removing backup &quot;&apos; + content[index].getPath() + &apos;&quot;&apos;);
+		org.apache.commons.io.FileUtils.deleteDirectory(content[index]);
+		// and move on to the next directory
+		index--;
+	}
+	// if debug mode is active, also log the backups that remain
+	if(logger.isDebugEnabled()){
+		while(index &gt;= 0){
+			logger.debug(&apos;Keeping backup &quot;&apos; + content[index].getPath() + &apos;&quot;&apos;);
+			index--;
+		}
+	}
+	
+	logger.info(&apos;Cleanup of directory &quot;&apos; + path + &apos;&quot; completed.&apos;);
+}</code>
+</codeTemplate>
